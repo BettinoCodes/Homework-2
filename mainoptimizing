@@ -1,0 +1,89 @@
+
+from datetime import datetime, timedelta
+from pprint import pprint
+
+def convert_to_24hr(start_end_times):
+    start = start_end_times[0]
+    end = start_end_times[1]
+    if len(start) < 5:
+        start = "0" + start
+    if len(end) < 5:
+        end = "0" + end
+
+    first_two_start = f"{start[0]}{start[1]}"
+    first_two_end= f"{end[0]}{end[1]}"
+
+
+    if int(first_two_start) < 6:
+        start = start + " AM"
+    else:
+        start = start + " PM"
+    if int(first_two_end) < 6:
+        end = end + " AM"
+    else:
+        end = end + " PM"
+
+    starttime_24hr = datetime.strptime(start, "%I:%M %p").strftime("%H:%M")
+    endtime_24hr = datetime.strptime(end, "%I:%M %p").strftime("%H:%M")
+
+    return starttime_24hr, endtime_24hr
+
+dict_data = {}
+
+with open('personaldata', "r") as file:
+            lines = file.readlines()
+            i = 0
+            # emp_no = ""
+            # number_of_shifts = ""
+            # address = ""
+            # city_state_zip = ""
+            # rates = ""
+            while i < len(lines):
+                emp_no = lines[i].strip()
+
+                personal = {
+                    "emp_no": lines[i].strip(),
+                    "name": lines[i+1].strip(),
+                    "address": lines[i+2].strip(),
+                    "city_state_zip": lines[i+3].strip(),
+                    "rates": lines[i+4].strip().split(),
+                    "hours worked": []
+                }
+
+                dict_data[emp_no] = personal
+                i += 6
+
+
+with open('payroll', 'r') as file:
+    lines = file.readlines()
+    i = 0
+    while i < len(lines):
+        emp_no = lines[i].strip()
+        number_of_shifts = lines[i+1].strip()
+        i += 2
+        hours = []
+        while i < len(lines) and lines[i].strip() != "":
+            start_end_times = lines[i].strip().split()
+            
+            starttime_24hr, endtime_24hr= convert_to_24hr(start_end_times)
+            start = datetime.strptime(starttime_24hr, "%H:%M")
+            end = datetime.strptime(endtime_24hr, "%H:%M")
+
+            hours.append([starttime_24hr, endtime_24hr])
+
+            try:
+                i += 1
+            except IndexError:
+                break
+        dict_data[emp_no]["hours worked"] = hours
+        try:
+            i += 1
+        except IndexError:
+            break
+
+
+
+        
+
+pprint(dict_data)
+
