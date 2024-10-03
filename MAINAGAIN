@@ -1,16 +1,21 @@
-
 from datetime import datetime, timedelta
 from pprint import pprint
 
-# time_9_pm = datetime.strptime("21:00", "%H:%M").strftime("%H:%M")
-# time_midnight = datetime.strptime("00:00", "%H:%M").strftime("%H:%M")
-# time_6_am = datetime.strptime("06:00", "%H:%M").strftime("%H:%M")
+#alot of prints were used to debug my code
 
 time_9_pm = datetime.strptime("21:00", "%H:%M")#.strftime("%H:%M")
-time_midnight = datetime.strptime("00:00", "%H:%M")#.strftime("%H:%M")
+
+#midnight counts as the next day
+time_midnight = datetime.strptime("00:00", "%H:%M")+ timedelta(days=1)#.strftime("%H:%M")
+
 time_6_am = datetime.strptime("06:00", "%H:%M")#.strftime("%H:%M") 
 
+#need to detect the day difference if shift goes to next day
+time_6_am_next = datetime.strptime("06:00", "%H:%M") + timedelta(days=1)#.strftime("%H:%M") 
+
+
 def process_employee_shifts(emp_no, number_of_shifts, lines, i, dict_data):
+    """Funtion was created in order to process the employee shifts to the rate that it belongs and returns, the iteration, hours in the shift"""
     i += 2
     hours = []
     total_fee = 0
@@ -26,8 +31,12 @@ def process_employee_shifts(emp_no, number_of_shifts, lines, i, dict_data):
 
         print(f"Shift start: {starttime_24hr.strftime('%H:%M')}, Shift end: {endtime_24hr.strftime('%H:%M')}")
         print(f"Initial current time: {current_time.strftime('%H:%M')}")
+        print(f"Hours worker for: {(endtime_24hr - current_time).seconds / 3600} hours")
 
-        # Condition for rates between 6 AM and 9 PM
+        hours.append([starttime_24hr.strftime("%H:%M"), endtime_24hr.strftime("%H:%M")])
+        print(f"Hours worked: {hours}")
+
+        # check condition for rates between 6 AM and 9 PM
         if current_time >= time_6_am and current_time < time_9_pm:
             if endtime_24hr <= time_9_pm:
                 total_fee += (endtime_24hr - current_time).seconds / 3600 * float(dict_data[emp_no]["rates"][0])
@@ -39,8 +48,8 @@ def process_employee_shifts(emp_no, number_of_shifts, lines, i, dict_data):
 
         print(f"Current time after 6 AM to 9 PM check: {current_time.strftime('%H:%M')}, Total fee: {total_fee}")
 
-        # Condition for rates between 9 PM and midnight
-        if current_time <= time_midnight:
+        # check condition for rates between 9 PM and midnight
+        if current_time >= time_9_pm and current_time < time_midnight:
             if endtime_24hr <= time_midnight:
                 total_fee += (endtime_24hr - current_time).seconds / 3600 * float(dict_data[emp_no]["rates"][1])
                 print("here 3")
@@ -51,20 +60,19 @@ def process_employee_shifts(emp_no, number_of_shifts, lines, i, dict_data):
 
         print(f"Current time after 9 PM to midnight check: {current_time.strftime('%H:%M')}, Total fee: {total_fee}")
 
-        # Condition for rates after midnight to 6 AM
-        if current_time <= time_6_am:
-            if endtime_24hr <= time_6_am:
+        #check condition for rates after midnight to 6 AM
+        if current_time >= time_midnight and current_time < time_6_am_next:
+            if endtime_24hr <= time_6_am_next:
                 total_fee += (endtime_24hr - current_time).seconds / 3600 * float(dict_data[emp_no]["rates"][2])
+                print(f"{total_fee} += {(endtime_24hr - current_time).seconds / 3600} * {float(dict_data[emp_no]["rates"][2])}")
                 print("here 5")
             else:
+                print(f"{total_fee} += {(time_6_am - current_time).seconds / 3600} * {float(dict_data[emp_no]["rates"][2])}")
                 total_fee += (time_6_am - current_time).seconds / 3600 * float(dict_data[emp_no]["rates"][2])
                 print("here 6")
+                
 
         print(f"Current time after midnight to 6 AM check: {current_time.strftime('%H:%M')}, Total fee: {total_fee}")
-
-        # Storing hours in 'hours' list
-        hours.append([starttime_24hr.strftime("%H:%M"), endtime_24hr.strftime("%H:%M")])
-        print(f"Hours worked: {hours}")
 
         i += 1
 
@@ -72,6 +80,7 @@ def process_employee_shifts(emp_no, number_of_shifts, lines, i, dict_data):
     return total_fee, hours, i
 
 def convert_to_24hr(start_end_times):
+    """convert into 24hr format to make it easier to dectect, checks the logic of 6AM to 6PM timeframe"""
     start = start_end_times[0]
     end = start_end_times[1]
     
@@ -83,12 +92,12 @@ def convert_to_24hr(start_end_times):
     first_two_start = int(start[:2])
     first_two_end = int(end[:2])
 
-    if first_two_start <= 6 or first_two_start == 12:
+    if first_two_start < 6 or first_two_start == 12:
         start = start + " AM"
     else:
         start = start + " PM"
 
-    if first_two_end <= 6 or first_two_end == 12:
+    if first_two_end < 6 or first_two_end == 12:
         end = end + " AM"
     else:
         end = end + " PM"
@@ -127,19 +136,48 @@ with open('personaldata', "r") as file:
 with open('payroll', 'r') as file:
     lines = file.readlines()
     i = 0
-while i < len(lines):
-    emp_no = lines[i].strip()
-    number_of_shifts = lines[i + 1].strip()
-    total_fee, hours, i = process_employee_shifts(emp_no, number_of_shifts, lines, i, dict_data)
-    dict_data[emp_no]["total fee"] = total_fee
-    dict_data[emp_no]["hours worked"] = hours
-    try:
-        i += 1
-    except IndexError:
-        break
+    while i < len(lines):
+        emp_no = lines[i].strip()
+        number_of_shifts = lines[i + 1].strip()
+        total_fee, hours, i = process_employee_shifts(emp_no, number_of_shifts, lines, i, dict_data)
+        dict_data[emp_no]["total fee"] = total_fee
+        dict_data[emp_no]["hours worked"] = hours
+        try:
+            i += 1
+        except IndexError:
+            break
+
+# pprint(dict_data["0008"]['total fee'])
+# pprint(dict_data["0008"]['rates'])
+# pprint(dict_data)
 
 
-        
+#-------------------------------------here--------------------------------------
 
 pprint(dict_data)
 
+#added the data into a smaller list to make it easier
+list_of_names = []
+for i in dict_data:
+    fullname = dict_data[i]["name"].split(', ')
+    customer_number = dict_data[i]["emp_no"]
+    data = [fullname[0], fullname[1].title(), dict_data[i]["total fee"]]
+    list_of_names.append(data)
+
+print(f"Before")
+for names in list_of_names:
+     print(names)
+
+#used a bubble sort to sort based on first name
+n = len(list_of_names)
+for i in range(n):
+        for j in range(0, n-i-1):
+            if list_of_names[j][1] < list_of_names[j + 1][1]:  # Change to < for reverse order
+                list_of_names[j], list_of_names[j + 1] = list_of_names[j + 1], list_of_names[j]
+print(f"After")
+for names in list_of_names:
+     print(names)
+
+with open('output.txt', 'w') as file:
+        for names in list_of_names:
+            file.write(f"{names[0]}, {names[1]}\n{names[2]}\n\n")
