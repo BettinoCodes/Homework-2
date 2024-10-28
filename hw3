@@ -1,131 +1,149 @@
 import csv
 
-class WoodBatchNode:
-    def __init__(self, quantity, price):
-        self.quantity = quantity
-        self.price = price
-        self.next = None
 
-class WoodInventoryLinkedList:
-    def __init__(self):
-        self.head = None
+class Woodinfo_node:
 
-    def add_batch(self, quantity, price):
-        new_node = WoodBatchNode(quantity, price)
-        if not self.head:
-            self.head = new_node
+  def __init__(self, woodtype, quantity, price):
+    self.woodtype = woodtype
+    self.quantity = quantity
+    self.price = price
+    self.next = None
+
+
+class Woods_linkedlist:
+
+  def __init__(self):
+    self.head = None
+
+  def add_node(self, woodtype, quantity, price):
+    new_node = Woodinfo_node(woodtype, quantity, price)
+    if self.head is None:
+      self.head = new_node
+    else:
+      current = self.head
+      while current.next is not None:
+        current = current.next
+      current.next = new_node
+
+  def display_list(self):
+    current = self.head
+    while current is not None:
+      print(
+          f"Wood Type: {current.woodtype}, Quantity: {current.quantity}, Price: {current.price}"
+      )
+      current = current.next
+
+  def search_node(self, woodtype):
+    current = self.head
+    while current is not None:
+      if current.woodtype == woodtype:
+        return current
+      current = current.next
+    return None
+
+  def remove_head(self):
+    if self.head is None:
+      return
+    self.head = self.head.next
+
+  def delete_node(self, woodtype):
+    current = self.head
+    previous = None
+    while current is not None:
+      if current.woodtype == woodtype:
+        if previous is None:
+          self.head = current.next
         else:
-            current = self.head
-            while current.next:
-                current = current.next
-            current.next = new_node
-        print(f"Received {quantity} pieces at ${price:.2f} each.")
+          previous.next = current.next
+        return
+      previous = current
+      current = current.next
+      
+  def total_quantity(self):
+    total = 0
+    current = self.head
+    while current is not None:
+      total += current.quantity
+      current = current.next
+    return total
 
-    def sell_batch(self, quantity, markup, discount=0):
-        total_sale = 0.0
-        original_quantity = quantity
-        current = self.head
-        previous = None
 
-        while current and quantity > 0:
-            selling_quantity = min(current.quantity, quantity)
-            sale_price = current.price * (1 + markup - discount)
-            sale_amount = selling_quantity * sale_price
-            total_sale += sale_amount
+def process_sale(wood_list, wood_type, quantity_to_sell, promotion):
+  quantity_remaining = quantity_to_sell
 
-            print(f"{selling_quantity} at ${sale_price:.2f} each Sales: ${sale_amount:.2f}")
-            
-            current.quantity -= selling_quantity
-            quantity -= selling_quantity
+  while wood_list.head and quantity_remaining > 0:
+    current_node = wood_list.head
 
-            if current.quantity == 0:
-                if previous:
-                    previous.next = current.next
-                else:
-                    self.head = current.next
-            else:
-                previous = current
-            
-            current = current.next
+    if current_node.quantity >= quantity_remaining:
+      # Enough stock in this node; fulfill sale and reduce quantity
+      print(
+          f"Selling {quantity_remaining} units of {wood_type} at ${current_node.price * (1 + (promotion/100))}"
+      )
+      current_node.quantity -= quantity_remaining
+      quantity_remaining = 0
+    else:
+      # Not enough stock in this node; sell remaining stock and move to next node
+      print(
+          f"Selling {current_node.quantity} units of {wood_type} at ${current_node.price * (1 + (promotion/100))}"
+      )
+      quantity_remaining -= current_node.quantity
+      wood_list.remove_head()
 
-        if quantity > 0:
-            print(f"Remainder of {quantity} pieces not available")
-        
-        print(f"Total Sale: ${total_sale:.2f}")
-        return total_sale
+  if quantity_remaining > 0:
+    print(
+        f"Insufficient stock for {wood_type}. {quantity_remaining} units remain unsold."
+    )
 
-    def get_remaining_stock(self):
-        stock = []
-        current = self.head
-        while current:
-            stock.append((current.quantity, current.price))
-            current = current.next
-        return stock
 
-class TrueLumberCompany:
-    def __init__(self):
-        self.oak_inventory = WoodInventoryLinkedList()
-        self.cherry_inventory = WoodInventoryLinkedList()
-        self.markup = 0.3
-        self.discount = 0
+cherry_woodstock = Woods_linkedlist()
+oak_woodstock = Woods_linkedlist()
 
-    def process_receipt(self, wood_type, quantity, price):
-        if wood_type == 'O':
-            self.oak_inventory.add_batch(quantity, price)
-        elif wood_type == 'C':
-            self.cherry_inventory.add_batch(quantity, price)
+# R,C
+# S,O
+# R,O
+# S,C
 
-    def process_sale(self, wood_type, quantity):
-        discount = self.discount
-        self.discount = 0
 
-        if wood_type == 'O':
-            print(f"Selling {quantity} pieces of Oak Wood")
-            self.oak_inventory.sell_batch(quantity, self.markup, discount)
-        elif wood_type == 'C':
-            print(f"Selling {quantity} pieces of Cherry Maple Wood")
-            self.cherry_inventory.sell_batch(quantity, self.markup, discount)
+def convert_dollars(price):
+  return float(price[1:-1])
 
-    def process_promotion(self, discount_percentage):
-        self.discount = discount_percentage / 100
-        print(f"Next customer will receive a {discount_percentage}% discount.")
 
-    def report_remaining_stock(self):
-        print("\nRemaining Oak Wood Inventory:")
-        for quantity, price in self.oak_inventory.get_remaining_stock():
-            print(f"{quantity} pieces at ${price:.2f} each")
+with open('data.csv', 'r') as csvfile:
+  # Create a reader object
+  csv_reader = csv.reader(csvfile)
+  current_promotion = 0
+  # Iterate through the rows in the CSV file
+  for row in csv_reader:
+    if row[0] == 'R' and row[1] == "C":
+      money = convert_dollars(row[3])
+      quant = int(row[2])
+      cherry_woodstock.add_node(row[1], quant, money)
+      print(f"Received {quant} units of Cherry Wood at ${money}")
 
-        print("\nRemaining Cherry Maple Wood Inventory:")
-        for quantity, price in self.cherry_inventory.get_remaining_stock():
-            print(f"{quantity} pieces at ${price:.2f} each")
+    elif row[0] == 'R' and row[1] == "O":
+      money = convert_dollars(row[3])
+      quant = int(row[2])
+      oak_woodstock.add_node(row[1], quant, money)
+      print(f"Received {quant} units of Oak wood at ${money}")
 
-    def process_csv(self, filename):
-        with open(filename, mode='r') as file:
-            csv_reader = csv.reader(file)
-            for row in csv_reader:
-                record_type = row[0]
-                wood_type = row[1]
-                
-                # For "R" and "S" records, the third column is a quantity
-                if record_type in ['R', 'S']:
-                    quantity = int(row[2]) if row[2] else 0
-                    price = float(row[3].replace('$', '')) if row[3] else None
+    elif row[0] == 'S' and row[1] == "O":
+      quant = int(row[2])
+      total_wood_to_sell = oak_woodstock.total_quantity()
+      print(f"We have {total_wood_to_sell} units of Oak wood in stock")
+      process_sale(oak_woodstock, row[1], quant, current_promotion)
 
-                    if record_type == 'R' and price is not None:
-                        # Process receipt records
-                        self.process_receipt(wood_type, quantity, price)
-                    elif record_type == 'S':
-                        # Process sale records
-                        self.process_sale(wood_type, quantity)
+    elif row[0] == 'S' and row[1] == "C":
+      quant = int(row[2])
+      total_wood_to_sell = cherry_woodstock.total_quantity()
+      print(f"We have {total_wood_to_sell} units of cherry wood in stock")
+      process_sale(cherry_woodstock, row[1], quant, current_promotion)
 
-                # For "P" records, the third column is a discount percentage
-                elif record_type == 'P':
-                    discount_percentage = int(row[2].replace('%', ''))
-                    self.process_promotion(discount_percentage)
+    elif row[0] == 'P':
+      current_promotion = int(row[2][0:2])
+      print("Promotion: ", current_promotion)
 
-    # Report remaining stock after processing all records
-            self.report_remaining_stock()
-
-# Usage example
-lumber_company = TrueLumberCompany()
-lumber_company.process_csv('data.csv')
+# Display the linked lists
+# print("Cherry Woodstock:")
+# cherry_woodstock.display_list()
+# print("\nOak Woodstock:")
+# oak_woodstock.display_list()
