@@ -1,6 +1,7 @@
 import csv
 
 
+#our node of necessary information for the csv file
 class Woodinfo_node:
 
   def __init__(self, woodtype, quantity, price):
@@ -9,7 +10,7 @@ class Woodinfo_node:
     self.price = price
     self.next = None
 
-
+#class for the linked list to store the wood information
 class Woods_linkedlist:
 
   def __init__(self):
@@ -46,18 +47,6 @@ class Woods_linkedlist:
       return
     self.head = self.head.next
 
-  def delete_node(self, woodtype):
-    current = self.head
-    previous = None
-    while current is not None:
-      if current.woodtype == woodtype:
-        if previous is None:
-          self.head = current.next
-        else:
-          previous.next = current.next
-        return
-      previous = current
-      current = current.next
       
   def total_quantity(self):
     total = 0
@@ -67,33 +56,33 @@ class Woods_linkedlist:
       current = current.next
     return total
 
-
 def process_sale(wood_list, wood_type, quantity_to_sell, promotion):
+  """
+  Processes a sale for a specific wood type by reducing inventory in FIFO order.
+
+  Parameters:
+  - wood_list (WoodsLinkedList): The linked list representing inventory for a wood type.
+  - wood_type (str): The type of wood being sold.
+  - quantity_to_sell (int): The quantity of wood to sell.
+  """
   quantity_remaining = quantity_to_sell
 
   while wood_list.head and quantity_remaining > 0:
-    current_node = wood_list.head
+      current_node = wood_list.head
 
-    if current_node.quantity >= quantity_remaining:
-      # Enough stock in this node; fulfill sale and reduce quantity
-      print(
-          f"Selling {quantity_remaining} units of {wood_type} at ${current_node.price * (1 + (promotion/100))}"
-      )
-      current_node.quantity -= quantity_remaining
-      quantity_remaining = 0
-    else:
-      # Not enough stock in this node; sell remaining stock and move to next node
-      print(
-          f"Selling {current_node.quantity} units of {wood_type} at ${current_node.price * (1 + (promotion/100))}"
-      )
-      quantity_remaining -= current_node.quantity
-      wood_list.remove_head()
+      if current_node.quantity > quantity_remaining:
+          formatted_price = format(current_node.price * (1 + (promotion/100)), ".2f")
+          print(f"Selling {quantity_remaining} units of {wood_type} at ${formatted_price}")
+          current_node.quantity -= quantity_remaining
+          quantity_remaining = 0
+      else:
+          formatted_price = format(current_node.price * (1 + (promotion/100)), ".2f")
+          print(f"Selling {quantity_remaining} units of {wood_type} at ${formatted_price}")
+          quantity_remaining -= current_node.quantity
+          wood_list.remove_head()
 
   if quantity_remaining > 0:
-    print(
-        f"Insufficient stock for {wood_type}. {quantity_remaining} units remain unsold."
-    )
-
+      print(f"Insufficient stock for {wood_type}. {quantity_remaining} units remain unsold.")
 
 cherry_woodstock = Woods_linkedlist()
 oak_woodstock = Woods_linkedlist()
@@ -111,7 +100,7 @@ def convert_dollars(price):
 with open('data.csv', 'r') as csvfile:
   # Create a reader object
   csv_reader = csv.reader(csvfile)
-  current_promotion = 0
+  current_promotion = 30
   # Iterate through the rows in the CSV file
   for row in csv_reader:
     if row[0] == 'R' and row[1] == "C":
@@ -119,23 +108,29 @@ with open('data.csv', 'r') as csvfile:
       quant = int(row[2])
       cherry_woodstock.add_node(row[1], quant, money)
       print(f"Received {quant} units of Cherry Wood at ${money}")
+      # print("CHERRY STOCK \n")
+      # cherry_woodstock.display_list()
 
     elif row[0] == 'R' and row[1] == "O":
       money = convert_dollars(row[3])
       quant = int(row[2])
       oak_woodstock.add_node(row[1], quant, money)
       print(f"Received {quant} units of Oak wood at ${money}")
+      # print("OAK STOCK \n")
+      # oak_woodstock.display_list()
 
     elif row[0] == 'S' and row[1] == "O":
       quant = int(row[2])
       total_wood_to_sell = oak_woodstock.total_quantity()
       print(f"We have {total_wood_to_sell} units of Oak wood in stock")
+      # oak_woodstock.display_list()
       process_sale(oak_woodstock, row[1], quant, current_promotion)
 
     elif row[0] == 'S' and row[1] == "C":
       quant = int(row[2])
       total_wood_to_sell = cherry_woodstock.total_quantity()
       print(f"We have {total_wood_to_sell} units of cherry wood in stock")
+      # cherry_woodstock.display_list()
       process_sale(cherry_woodstock, row[1], quant, current_promotion)
 
     elif row[0] == 'P':
